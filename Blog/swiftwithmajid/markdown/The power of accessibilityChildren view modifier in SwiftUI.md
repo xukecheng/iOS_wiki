@@ -1,0 +1,108 @@
+##  The power of accessibilityChildren view modifier in SwiftUI
+
+25 May 2022
+
+SwiftUI provides us with a rich set of view modifiers to manipulate the
+accessibility tree of views. I covered many of them, and you can find them in
+the blog’s dedicated Accessibility category. This week we will talk about the
+_accessibilityChildren_ view modifier and how we can benefit from it.
+
+**Enhancing the Xcode Simulators.**  
+Compare designs, show rulers, add a grid, quick actions for recent builds.
+Create recordings with touches & audio, trim and export them into MP4 or GIF
+and share them anywhere using drag & drop. Add bezels to screenshots and
+videos. [ Try now ](https://gumroad.com/a/931293139/ftvbh)
+
+The _accessibilityChildren_ view modifier allows us to create an accessibility
+container for a view and populate it with the elements from a view you provide
+using a _ViewBuilder_ closure. Let’s take a look at a quick example.
+
+    
+    
+    struct BarChartShape: Shape {
+        let dataPoints: [DataPoint]
+        
+        func path(in rect: CGRect) -> Path {
+            Path { p in
+                let width: CGFloat = rect.size.width / CGFloat(dataPoints.count)
+                var x: CGFloat = 0
+                
+                for point in dataPoints {
+                    let pointRect = CGRect(
+                        x: x,
+                        y: rect.size.height - point.value,
+                        width: width,
+                        height: rect.size.height
+                    )
+                    let pointPath = RoundedRectangle(cornerRadius: 8).path(in: pointRect)
+                    p.addPath(pointPath)
+                    x += width
+                }
+            }
+        }
+    }
+    
+
+As you can see in the example above, we have the shape-type drawing data
+points we pass. We can’t provide accessibility values for every data point
+because the shape becomes a single view after stroking or filling it.
+
+> To learn more about accessibility view modifiers available in SwiftUI, take
+> a look at the [ Accessibility category ](/categories) on the blog.
+
+Fortunately, SwiftUI gives us the _accessibilityChildren_ view modifier,
+especially for this case.
+
+    
+    
+    struct ContentView: View {
+        @State private var dataPoints: [DataPoint] = [
+            .init(id: .init(), value: 20),
+            .init(id: .init(), value: 30),
+            .init(id: .init(), value: 5),
+            .init(id: .init(), value: 100),
+            .init(id: .init(), value: 80)
+        ]
+        
+        var body: some View {
+            BarChartShape(dataPoints: dataPoints)
+                .fill(.red)
+                .accessibilityLabel("Chart")
+                .accessibilityChildren {
+                    HStack(alignment: .bottom, spacing: 0) {
+                        ForEach(dataPoints) { point in
+                            RoundedRectangle(cornerRadius: 8)
+                                .accessibilityValue(Text(point.value.formatted()))
+                        }
+                    }
+                }
+        }
+    }
+    
+
+By applying the _accessibilityChildren_ view modifier, we create an
+accessibility container and populate it with elements from the view provided
+in the _ViewBuilder_ closure. SwiftUI doesn’t render the view that we pass via
+_ViewBuilder_ closure. SwiftUI uses it only for populating the accessibility
+tree with child elements.
+
+> To learn more about the _ViewBuilder_ type, take a look at my [ “The power
+> of @ViewBuilder in SwiftUI” ](/2019/12/18/the-power-of-viewbuilder-in-
+> swiftui/) post.
+
+The main difference between the _accessibilityChildren_ and
+_accessibilityRepresentation_ view modifiers is that the first one doesn’t
+affect the view itself. It only creates an accessibility container for child
+elements where the _accessibilityRepresentation_ view modifier completely
+replaces the accessibility tree of the current view.
+
+> To learn more about the benefits of the _accessibilityRepresentation_ view
+> modifier, look at my [ “The power of accessibilityRepresentation view
+> modifier in SwiftUI” ](/2021/09/01/the-power-of-accessibility-
+> representation-view-modifier-in-swiftui/) post.
+
+Today we learned about another powerful accessibility view modifier that
+SwiftUI provides us. SwiftUI is doing an excellent job by giving us so many
+friendly APIs, simplifying the work we have to do to make our apps accessible
+for everyone.
+

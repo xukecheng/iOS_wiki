@@ -1,0 +1,211 @@
+##  Mastering charts in SwiftUI. Selection.
+
+18 Jul 2023
+
+Swift Charts provides a lovely API allowing you to tune charts and add custom
+interactions within a few lines of code. The following framework iteration
+goes further and allows us to track chart selection in a single line of code.
+This week we will learn about new APIs allowing us to handle selection in
+Swift Charts.
+
+**Enhancing the Xcode Simulators.**  
+Compare designs, show rulers, add a grid, quick actions for recent builds.
+Create recordings with touches & audio, trim and export them into MP4 or GIF
+and share them anywhere using drag & drop. Add bezels to screenshots and
+videos. [ Try now ](https://gumroad.com/a/931293139/ftvbh)
+
+The pre-iOS17 version of Swift Charts provides us with the _chartOverlay_ view
+modifier allowing us to build custom overlays, including gestures. It also
+provides APIs for converting geometry position into a chart value. Let’s look
+at how we can use the _chartOverlay_ view modifier to build selection tracking
+in Swift Charts.
+
+    
+    
+    struct SelectionExample: View {
+        @State private var selectedIndex: Int?
+        @State private var numbers = (0..<10)
+            .map { _ in Double.random(in: 0...10) }
+        
+        var body: some View {
+            Chart(Array(zip(numbers.indices, numbers)), id: \.1) { index, number in
+                LineMark(
+                    x: .value("Index", index),
+                    y: .value("Number", number)
+                )
+                
+                if let selectedIndex {
+                    RuleMark(x: .value("Index", selectedIndex))
+                        .annotation(position: .bottom) {
+                            Text(verbatim: selectedIndex.formatted())
+                                .padding()
+                                .background(.regularMaterial)
+                        }
+                }
+            }
+            .chartOverlay { chart in
+                GeometryReader { geometry in
+                    Rectangle().fill(.primary.opacity(0.01)).containerShape(.rect)
+                        .gesture(
+                            DragGesture()
+                                .onEnded { _ in
+                                    selectedIndex = nil
+                                }
+                                .onChanged { value in
+                                    guard let plotFrame = chart.plotFrame else {
+                                        return
+                                    }
+                                    
+                                    let startX = geometry[plotFrame].origin.x
+                                    let currentX = value.location.x - startX
+                                    
+                                    if let index: Int = chart.value(atX: currentX) {
+                                        selectedIndex = index
+                                    }
+                                }
+                        )
+                }
+            }
+        }
+    }
+    
+
+As you can see in the example above, we use the _chartOverlay_ view modifier
+to add a transparent overlay with a drag gesture. We use an instance of the
+_ChartProxy_ type to convert the drag position to the chart data. We also draw
+a _RuleMark_ in the place where the chart is selected.
+
+> To learn more about building interactions with the Swift Charts framework,
+> take a look at my [ “Mastering charts in SwiftUI. Interactions.”
+> ](/2023/02/06/mastering-charts-in-swiftui-interactions/) post.
+
+The code above is simple, but writing it for every chart that needs a
+selection feature is repetitive. Fortunately, the next iteration of the Swift
+Charts framework includes the _chartXSelection_ and _chartYSelection_ view
+modifiers allowing us to implement the chart selection feature in a single
+line.
+
+    
+    
+    struct SelectionExample: View {
+        @State private var selectedIndex: Int?
+        @State private var numbers = (0..<10)
+            .map { _ in Double.random(in: 0...10) }
+        
+        var body: some View {
+            Chart(Array(zip(numbers.indices, numbers)), id: \.1) { index, number in
+                LineMark(
+                    x: .value("Index", index),
+                    y: .value("Number", number)
+                )
+                
+                if let selectedIndex {
+                    RuleMark(x: .value("Index", selectedIndex))
+                        .annotation(position: .bottom) {
+                            Text(verbatim: selectedIndex.formatted())
+                                .padding()
+                                .background(.regularMaterial)
+                        }
+                }
+            }
+            .chartXSelection(value: $selectedIndex)
+        }
+    }
+    
+
+As you can see, we replaced the whole chart overlay logic with a single line
+of code using the _chartXSelection_ view modifier. It does the same thing in a
+single line and looks great.
+
+The new version of the Swift Charts framework allows us to select a single
+value and a range of values. We can use _chartXSelection_ and
+_chartYSelection_ with the binding of _ClosedRange_ type to allow range
+selection.
+
+    
+    
+    struct RangeSelectionExample: View {
+        @State private var selectedRange: ClosedRange<Int>?
+        @State private var numbers = (0..<10)
+            .map { _ in Double.random(in: 0...10) }
+        
+        var body: some View {
+            Chart(Array(zip(numbers.indices, numbers)), id: \.1) { index, number in
+                LineMark(
+                    x: .value("Index", index),
+                    y: .value("Number", number)
+                )
+                
+                if let selectedRange {
+                    RectangleMark(
+                        xStart: .value("Index", selectedRange.lowerBound),
+                        xEnd: .value("Index", selectedRange.upperBound),
+                        yStart: .value("Number", 0),
+                        yEnd: .value("Number", 10)
+                    )
+                    .foregroundStyle(.blue.opacity(0.03 ))
+                }
+            }
+            .chartXSelection(range: $selectedRange)
+        }
+    }
+    
+
+In the example above, we use the _chartXSelection_ view modifier with a
+binding of _ClosedRange_ type. It allows us to draw a rectangle in the
+selected values range.
+
+The Swift Charts framework also allows us to customize the gesture while
+selecting by applying the _chartGesture_ view modifier. We can use it to
+create our own instance of the _DragGesture_ type and set the minimum distance
+to the particular value.
+
+    
+    
+    struct RangeSelectionExample: View {
+        @State private var selectedRange: ClosedRange<Int>?
+        @State private var numbers = (0..<10)
+            .map { _ in Double.random(in: 0...10) }
+        
+        var body: some View {
+            Chart(Array(zip(numbers.indices, numbers)), id: \.1) { index, number in
+                LineMark(
+                    x: .value("Index", index),
+                    y: .value("Number", number)
+                )
+                
+                if let selectedRange {
+                    RectangleMark(
+                        xStart: .value("Index", selectedRange.lowerBound),
+                        xEnd: .value("Index", selectedRange.upperBound),
+                        yStart: .value("Number", 0),
+                        yEnd: .value("Number", 10)
+                    )
+                    .foregroundStyle(.blue.opacity(0.03 ))
+                }
+            }
+            .chartXSelection(range: $selectedRange)
+            .chartGesture { chart in
+                DragGesture(minimumDistance: 16)
+                    .onChanged {
+                        chart.selectXRange(
+                            from: $0.startLocation.x,
+                            to: $0.location.x
+                        )
+                    }
+                    .onEnded { _ in selectedRange = nil }
+            }
+        }
+    }
+    
+
+As you can see, we tuned an instance of the _DragGesture_ type to handle
+selection in our chart. The _chartGesture_ view modifier provides us access to
+an instance of the _ChartProxy_ type that we can use to select values or
+ranges in the chart.
+
+This week we learned about the new APIs allowing us to implement chart data
+selection easily. I hope you enjoy the post. Feel free to follow me on [
+Twitter ](https://twitter.com/mecid) and ask your questions related to this
+post. Thanks for reading, and see you next week!
+

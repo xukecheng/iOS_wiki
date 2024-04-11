@@ -1,0 +1,352 @@
+##  Mastering NavigationSplitView in SwiftUI
+
+18 Oct 2022
+
+My final post in the new navigation APIs series in SwiftUI is about building
+two-three column apps. I have been waiting for all the betas to solve the
+critical issues with the brand-new _NavigationSplitView_ , and it looks like
+it is almost ready to use. This week we will learn how to use and customize
+_NavigationSplitView_ to build multi-column apps in SwiftUI.
+
+**Enhancing the Xcode Simulators.**  
+Compare designs, show rulers, add a grid, quick actions for recent builds.
+Create recordings with touches & audio, trim and export them into MP4 or GIF
+and share them anywhere using drag & drop. Add bezels to screenshots and
+videos. [ Try now ](https://gumroad.com/a/931293139/ftvbh)
+
+####  Basics
+
+The new iteration of the SwiftUI framework provides a brand new
+_NavigationSplitView_ type, allowing us to build multi-column apps in SwiftUI
+quickly. The usage of the new type is straightforward.
+
+    
+    
+    // For two-column navigation
+    struct RootView: View {
+        var body: some View {
+            NavigationSplitView {
+                // sidebar
+            } detail: {
+                // item details
+            }
+        }
+    }
+    
+    // For three-column navigation
+    struct RootView: View {
+        var body: some View {
+            NavigationSplitView {
+                // sidebar
+            } content: {
+                // content list
+            } detail: {
+                // item details
+            }
+        }
+    }
+    
+
+Usually, we should place the _NavigationSplitView_ at the root of our scene.
+Two different options allow us to display two or three-column navigation.
+_NavigationSplitView_ automatically wraps root views inside the sidebar,
+content, and detail columns into the _NavigationStack_ view. You don’t need to
+do it manually unless you need further navigation outside the content pane.
+
+    
+    
+    struct ContentView: View {
+        @State private var selectedFolder: String?
+        @State private var selectedItem: String?
+        
+        @State private var folders = [
+            "All": [
+                "Item1",
+                "Item2"
+            ],
+            "Favorites": [
+                "Item2"
+            ]
+        ]
+        
+        var body: some View {
+            NavigationSplitView {
+                List(selection: $selectedFolder) {
+                    ForEach(Array(folders.keys.sorted()), id: \.self) { folder in
+                        NavigationLink(value: folder) {
+                            Text(verbatim: folder)
+                        }
+                    }
+                }
+                .navigationTitle("Sidebar")
+            } content: {
+                if let selectedFolder {
+                    List(selection: $selectedItem) {
+                        ForEach(folders[selectedFolder, default: []], id: \.self) { item in
+                            NavigationLink(value: item) {
+                                Text(verbatim: item)
+                            }
+                        }
+                    }
+                    .navigationTitle(selectedFolder)
+                } else {
+                    Text("Choose a folder from the sidebar")
+                }
+            } detail: {
+                if let selectedItem {
+                    NavigationLink(value: selectedItem) {
+                        Text(verbatim: selectedItem)
+                            .navigationTitle(selectedItem)
+                    }
+                } else {
+                    Text("Choose an item from the content")
+                }
+            }
+        }
+    }
+    
+
+As you can see in the example above, we display the hierarchy of folders and
+items using the three-column navigation. We use value-based navigation links
+in conjunction with selection-based lists. SwiftUI automatically assigns the
+list selection to the value of a navigation link whenever the user presses it.
+
+> To learn about the basics of the new data-driven Navigation API in SwiftUI,
+> look at my [ “Mastering NavigationStack in SwiftUI. Navigator Pattern.”
+> ](/2022/06/15/mastering-navigationstack-in-swiftui-navigator-pattern/) post.
+
+All the navigation links inside selection-based lists work unless you have a
+navigation link outside of the list, as we have in the content column. In this
+case, we should wrap the content view with the _NavigationStack_ to provide
+additional destination points.
+
+    
+    
+    struct ContentView: View {
+        @State private var selectedFolder: String?
+        @State private var selectedItem: String?
+        
+        @State private var folders = [
+            "All": [
+                "Item1",
+                "Item2"
+            ],
+            "Favorites": [
+                "Item2"
+            ]
+        ]
+        
+        var body: some View {
+            NavigationSplitView {
+                List(selection: $selectedFolder) {
+                    ForEach(Array(folders.keys.sorted()), id: \.self) { folder in
+                        NavigationLink(value: folder) {
+                            Text(verbatim: folder)
+                        }
+                    }
+                }
+                .navigationTitle("Sidebar")
+            } content: {
+                if let selectedFolder {
+                    List(selection: $selectedItem) {
+                        ForEach(folders[selectedFolder, default: []], id: \.self) { item in
+                            NavigationLink(value: item) {
+                                Text(verbatim: item)
+                            }
+                        }
+                    }
+                    .navigationTitle(selectedFolder)
+                } else {
+                    Text("Choose a folder from the sidebar")
+                }
+            } detail: {
+                NavigationStack {
+                    ZStack {
+                        if let selectedItem {
+                            NavigationLink(value: selectedItem) {
+                                Text(verbatim: selectedItem)
+                                    .navigationTitle(selectedItem)
+                            }
+                        } else {
+                            Text("Choose an item from the content")
+                        }
+                    }
+                    .navigationDestination(for: String.self) { text in
+                        Text(verbatim: text)
+                    }
+                }
+            }
+        }
+    }
+    
+
+####  Adaptive navigation
+
+Selection-based list is not the only way to navigate through columns of the
+split view. You can provide destination points by using the
+_navigationDestination_ view modifier. In this case, SwiftUI will navigate to
+the particular view in the column coming next to the one with the
+_navigationDestination_ view modifier. But make sure, you don’t embed the view
+with _navigationDestination_ view modifier into the _NavigationStack_ ,
+because in this case it will push the view to the current _NavigationStack_ .
+
+    
+    
+    NavigationSplitView {
+        List {
+            NavigationLink {
+                InsightsFeatureView()
+            } label: {
+                Label("insights", systemImage: "chart.xyaxis.line")
+            }   
+            
+            NavigationLink {
+                SettingsFeatureView()
+            } label: {
+                Label("settings", systemImage: "gear")
+            }
+        }
+    } content: {
+        ContentUnavailableView("Use sidebar navigation", systemImage: "sidebar.left")
+    } detail: {
+        ContentUnavailableView("Use sidebar navigation", systemImage: "sidebar.left")
+    }
+    
+
+####  Styling
+
+_NavigationSplitView_ allows us to control the visibility of columns by
+providing a binding for the _NavigationSplitViewVisibility_ type. You can
+change it programmatically also. Here is an example of changing column
+visibility programmatically.
+
+    
+    
+    struct ContentView: View {
+        @State private var visibility: NavigationSplitViewVisibility = .all
+        @State private var selectedFolder: String?
+        @State private var selectedItem: String?
+        
+        @State private var folders = [
+            "All": [
+                "Item1",
+                "Item2"
+            ],
+            "Favorites": [
+                "Item2"
+            ]
+        ]
+        
+        var body: some View {
+            NavigationSplitView(columnVisibility: $visibility) {
+                List(selection: $selectedFolder) {
+                    ForEach(Array(folders.keys.sorted()), id: \.self) { folder in
+                        NavigationLink(value: folder) {
+                            Text(verbatim: folder)
+                        }
+                    }
+                }
+                .navigationTitle("Sidebar")
+            } content: {
+                if let selectedFolder {
+                    List(selection: $selectedItem) {
+                        ForEach(folders[selectedFolder, default: []], id: \.self) { item in
+                            NavigationLink(value: item) {
+                                Text(verbatim: item)
+                            }
+                        }
+                    }
+                    .navigationTitle(selectedFolder)
+                } else {
+                    Text("Choose a folder from the sidebar")
+                }
+            } detail: {
+                NavigationStack {
+                    ZStack {
+                        if let selectedItem {
+                            NavigationLink(value: selectedItem) {
+                                Text(verbatim: selectedItem)
+                                    .navigationTitle(selectedItem)
+                                    .toolbar {
+                                        Button("Focus") {
+                                            visibility = .detailOnly
+                                        }
+                                    }
+                            }
+                        } else {
+                            Text("Choose an item from the content")
+                        }
+                    }
+                    .navigationDestination(for: String.self) { text in
+                        Text(verbatim: text)
+                    }
+                }
+            }
+        }
+    }
+    
+
+The _NavigationSplitViewVisibility_ type provides a few options: _automatic,
+all, doubleColumn, detailOnly_ .
+
+  * _automatic_ \- Chooses the one from _all, doubleColumn, and detailOnly_ depending on the device environment. 
+  * _all_ \- Shows all the columns 
+  * _doubleColumn_ \- Shows two trailing columns 
+  * _detailOnly_ \- Shows only the details column by hiding the sidebar and content columns. 
+
+Another customization point of the _NavigationSplitView_ is its style. You can
+set the style of the _NavigationSplitView_ by using the
+_navigationSplitViewStyle_ view modifier. It accepts a few options:
+_automatic, balanced, and prominentDetail_ .
+
+  * _automatic_ \- Chooses the style depending on the device environment. 
+  * _balanced_ \- Tries to show the first two columns by reducing the detail column size. 
+  * _prominentDetail_ \- Focuses on presenting the detail column. 
+
+    
+    
+    struct RootView: View {
+        var body: some View {
+            NavigationSplitView {
+                // sidebar
+            } content: {
+                // content list
+            } detail: {
+                // item details
+            }
+            .navigationSplitViewStyle(.balanced)
+        }
+    }
+    
+
+The last thing you can customize is the width of the particular column in the
+_NavigationSplitView_ by using the _navigationSplitViewColumnWidth_ view
+modifier on the root view inside the column.
+
+    
+    
+    struct RootView: View {
+        var body: some View {
+            NavigationSplitView {
+                // sidebar
+            } content: {
+                ZStack {
+                
+                }
+                .navigationSplitViewColumnWidth(300)
+            } detail: {
+                // item details
+            }
+            .navigationSplitViewStyle(.balanced)
+        }
+    }
+    
+
+####  Conclusion
+
+Today we learned how to build two or three-column navigation in SwiftUI using
+the brand-new _NavigationSplitView_ . I think it is much easier than before or
+at least works better now. I hope you enjoy the post. Feel free to follow me
+on [ Twitter ](https://twitter.com/mecid) and ask your questions related to
+this post. Thanks for reading, and see you next week!
+
