@@ -24,5 +24,4 @@ def concat_markdown_files(markdown_files, output_file):
                 outfile.write("\n\n")
 
 
-# 将 markdown_files 中所有相同字母开头的文件合并
 concat_markdown_files(markdown_files, f"Observation.md")

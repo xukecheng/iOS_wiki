@@ -3,14 +3,14 @@ import glob
 
 # 获取所有的Markdown文件
 markdown_files = glob.glob(
-    "Documentation/Coredata/Documentation/**/*.md",
+    "Documentation/StoreKit/Documentation/**/*.md",
     recursive=True,
 )
 
 
 def concat_markdown_files(markdown_files, output_file):
     # 创建一个新的Markdown文件
-    with open(f"Documentation/Coredata/{output_file}", "w") as outfile:
+    with open(f"Documentation/StoreKit/{output_file}", "w") as outfile:
         for md_file in markdown_files:
             # 获取文件名作为标题
             title = os.path.basename(md_file).replace(".md", "")
@@ -24,4 +24,4 @@ def concat_markdown_files(markdown_files, output_file):
                 outfile.write("\n\n")
 
 
-concat_markdown_files(markdown_files, f"Coredata.md")
+concat_markdown_files(markdown_files, f"StoreKit.md")
